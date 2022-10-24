@@ -1,9 +1,13 @@
 import jsPDF from 'jspdf'
+import stampSrc from '../stamp.jpg'
+import watermarkSrc from '../watermark.jpg'
 
 const ORG = {
 	orgName: 'Scouts Jan Berchmans',
 	orgAddress: 'Veerstraat 14, 9160 Lokeren',
+	orgPlace: 'Lokeren',
 	orgContact: 'groepsleiding@scoutsheirbrug.be',
+	orgResponsible: 'Miro Stuyven',
 }
 
 export interface Certificate {
@@ -15,6 +19,7 @@ export interface Certificate {
 	campPayment: number
 	campPaymentDate: string
 	date: string
+	signature: string
 }
 
 const A4_WIDTH = 210
@@ -39,6 +44,12 @@ export function renderCertificate(certificate: Certificate) {
 		y += 10
 	}
 
+	function image(src: string, x: number, y: number, w: number, h: number) {
+		const img = new Image()
+		img.src = src
+		doc.addImage(img, '', x, y, w, h)
+	}
+
 	function section(label: string | null, lines: number) {
 		doc.rect(x, y, A4_WIDTH - (2 * x), (label ? 12 : 4) + lines * 10)
 		if (label) {
@@ -55,6 +66,8 @@ export function renderCertificate(certificate: Certificate) {
 		doc.text(value, x2, y)
 		y += 10
 	}
+
+	image(watermarkSrc, 20, 20, A4_WIDTH - 40, (A4_WIDTH - 40) * 1860 / 1616)
 
 	title('Attest van deelname aan scoutskamp')
 
@@ -74,7 +87,16 @@ export function renderCertificate(certificate: Certificate) {
 	field('Datum betaling', certificate.campPaymentDate)
 
 	section(null, 6)
-	field('Datum', certificate.date)
+	font({ size: 13, color: '#666', style: 'bold' })
+	doc.text('Handtekening verantwoordelijke', x + 2, y)
+	doc.text('Stempel van de organisatie', x + 125, y)
+	image(stampSrc, x + 135, y + 5, 40, 40)
+	if (certificate.signature.length > 0) {
+		image(certificate.signature, x1, y + 5, 50, 50 * 731 / 1587)
+	}
+	y += 50
+	font({ size: 15 })
+	doc.text(`Opgemaakt op ${certificate.date} te ${ORG.orgPlace}`, x1, y)
 
 	return doc.output('datauristring', { filename: `Attest ${certificate.memberName}` })
 }

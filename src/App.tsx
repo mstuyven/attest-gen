@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { DateField, DateRangeField, InputField, NumberField } from './components/InputField'
+import { DateField, DateRangeField, ImageField, InputField, NumberField } from './components/InputField'
 import { Certificate, renderCertificate } from './domain/Certificate'
 
 export function App() {
@@ -8,6 +8,7 @@ export function App() {
   const [campPeriod, setCampPeriod] = useState<[string, string]>(['', ''])
   const [campPayment, setCampPayment] = useState(0)
   const [campPaymentDate, setCampPaymentDate] = useState('')
+  const [signature, setSignature] = useState('')
 
   const certificate = useMemo<Certificate>(() => {
     const startDate = new Date(campPeriod[0])
@@ -23,8 +24,9 @@ export function App() {
       campPayment,
       campPaymentDate: campPaymentDate ? new Date(campPaymentDate).toLocaleDateString('nl-BE') : '',
       date: new Date().toLocaleDateString('nl-BE'),
+      signature,
     }
-  }, [memberName, memberAddress, campPeriod, campPayment, campPaymentDate])
+  }, [memberName, memberAddress, campPeriod, campPayment, campPaymentDate, signature])
 
   const output = useMemo(() => {
     return renderCertificate(certificate)
@@ -47,9 +49,10 @@ export function App() {
       <DateRangeField label='Periode van het kamp' value={campPeriod} onInput={setCampPeriod} />
       <NumberField label='Betaald bedrag' value={campPayment} onInput={setCampPayment} />
       <DateField label='Datum betaling' value={campPaymentDate} onInput={setCampPaymentDate} />
+      <ImageField label='Handtekening verantwoordelijke' value={signature} onInput={setSignature} />
     </div>
     <div>
-      <object class='w-full h-full min-h-[400px]' data={`${preview}#toolbar=0&navpanes=0&view=FitH`} type='application/pdf' />
+      <iframe class='w-full h-full min-h-[400px]' src={`${preview}#toolbar=0&navpanes=0&view=FitH`} />
     </div>
   </main>
 }

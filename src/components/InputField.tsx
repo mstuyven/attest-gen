@@ -1,5 +1,5 @@
 import { JSX } from 'preact'
-import { useCallback, useState } from 'preact/hooks'
+import { useCallback, useRef, useState } from 'preact/hooks'
 
 interface InputProps {
 	value: string
@@ -72,5 +72,43 @@ export function DateRangeField({ label, value, onInput }: DateRangeFieldProps) {
 			<Input value={value[0]} onInput={s => onInput([s, value[1]])} type='date' />
 			<Input value={value[1]} onInput={e => onInput([value[0], e])} type='date' />
 		</div>
+	</div>
+}
+
+interface ImageFieldProps {
+	label: string
+	value: string
+	onInput: (value: string) => void
+}
+export function ImageField({ label, onInput }: ImageFieldProps) {
+	const ref = useRef<HTMLInputElement>(null)
+	const [name, setName] = useState<string>('')
+
+	const onFileInput = useCallback(() => {
+		if (ref.current?.files) {
+			for (const file of ref.current.files) {
+				setName(file.name)
+				file.arrayBuffer().then(buf => {
+					const array = new Uint8Array(buf)
+					const blob = new Blob([array], { type: 'image/jpeg' })
+					const url = URL.createObjectURL(blob)
+					onInput(url)
+				})
+			}
+		} else {
+			setName('')
+			onInput('')
+		}
+	}, [ref, onInput])
+
+	return <div class='mb-1 w-96'>
+		<label class='block'>{label}</label>
+		<input
+			ref={ref}
+			class='rounded border-gray-800 bg-gray-300 text-gray-900 p-1 px-2 w-full'
+			type='file'
+			accept='image/jpeg'
+			value={name}
+			onInput={onFileInput} />
 	</div>
 }
