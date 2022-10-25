@@ -1,15 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { Button } from './components/Button'
 import { DateField, DateRangeField, ImageField, InputField, NumberField } from './components/InputField'
 import { Certificate, renderCertificate } from './domain/Certificate'
+import { useLocalStorage } from './hooks/useLocalStorage'
 
 export function App() {
-  const [memberName, setMemberName] = useState('')
-  const [memberAddress, setMemberAddress] = useState('')
-  const [campPeriod, setCampPeriod] = useState<[string, string]>(['', ''])
-  const [campPayment, setCampPayment] = useState(0)
-  const [campPaymentDate, setCampPaymentDate] = useState('')
+  const [memberName, setMemberName] = useLocalStorage('member_name', '')
+  const [memberAddress, setMemberAddress] = useLocalStorage('member_address', '')
+  const [campStart, setCampStart] = useLocalStorage('camp_start', '')
+  const [campEnd, setCampEnd] = useLocalStorage('camp_end', '')
+  const [campPayment, setCampPayment] = useLocalStorage('camp_payment', 0, s => parseInt(s, 10), n => n.toFixed())
+  const [campPaymentDate, setCampPaymentDate] = useLocalStorage('camp_payment_date', '')
   const [signature, setSignature] = useState('')
+
+  const campPeriod = useMemo<[string, string]>(() => [campStart, campEnd], [campStart, campEnd])
+  const setCampPeriod = useCallback<(p: [string, string]) => void>(p => {
+    setCampStart(p[0])
+    setCampEnd(p[1])
+  }, [setCampStart, setCampEnd])
 
   const campDays = useMemo(() => {
     const startDate = new Date(campPeriod[0])
