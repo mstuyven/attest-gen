@@ -10,14 +10,19 @@ const ORG = {
 	orgResponsible: 'Miro Stuyven',
 }
 
+export type CertificateType = 'camp' | 'membership'
+
 export interface Certificate {
+	type: CertificateType
 	memberName: string
 	memberAddress: string
 	campStartDate: string
 	campEndDate: string
 	campDays: number
-	campPayment: number
-	campPaymentDate: string
+	membershipStartDate: string
+	membershipEndDate: string
+	payment: number
+	paymentDate: string
 	date: string
 	signature: string
 }
@@ -25,6 +30,8 @@ export interface Certificate {
 const A4_WIDTH = 210
 
 export function renderCertificate(certificate: Certificate) {
+	const isCamp = certificate.type === 'camp'
+
 	const doc = new jsPDF()
 	function font({ size, color, style }: { size?: number; color?: string; style?: 'bold' }) {
 		doc.setFontSize(size ?? 16)
@@ -67,11 +74,11 @@ export function renderCertificate(certificate: Certificate) {
 		y += 10
 	}
 
-	image(watermarkSrc, 20, 20, A4_WIDTH - 40, (A4_WIDTH - 40) * 1860 / 1616)
+	image(watermarkSrc, 30, 30, A4_WIDTH - 60, (A4_WIDTH - 60) * 1860 / 1616)
 
-	title('Attest van deelname aan scoutskamp')
+	title(isCamp ? 'Attest deelname aan scoutskamp' : 'Attest lidmaatschap jeugdbeweging')
 
-	section('Gegevens van de deelnemer', 2)
+	section(isCamp ? 'Gegevens van de deelnemer' : 'Gegevens van het lid', 2)
 	field('Naam', certificate.memberName)
 	field('Adres', certificate.memberAddress)
 
@@ -80,11 +87,16 @@ export function renderCertificate(certificate: Certificate) {
 	field('Adres', ORG.orgAddress)
 	field('E-mailadres', ORG.orgContact)
 
-	section('Gegevens van het kamp', 4)
-	field('Periode', `${certificate.campStartDate} - ${certificate.campEndDate}`)
-	field('Aantal dagen', `${certificate.campDays}`)
-	field('Betaald bedrag', `${certificate.campPayment} euro`)
-	field('Datum betaling', certificate.campPaymentDate)
+	if (isCamp) {
+		section('Gegevens van het kamp', 4)
+		field('Periode', `${certificate.campStartDate} - ${certificate.campEndDate}`)
+		field('Aantal dagen', `${certificate.campDays}`)
+	} else {
+		section('Gegevens van het lidmaatschap', 3)
+		field('Periode', `${certificate.membershipStartDate} - ${certificate.membershipEndDate}`)
+	}
+	field('Betaald bedrag', `${certificate.payment} euro`)
+	field('Datum betaling', certificate.paymentDate)
 
 	section(null, 6)
 	font({ size: 13, color: '#666', style: 'bold' })

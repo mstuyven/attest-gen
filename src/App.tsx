@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { Button } from './components/Button'
 import { DateField, DateRangeField, ImageField, InputField, NumberField } from './components/InputField'
-import { Certificate, renderCertificate } from './domain/Certificate'
+import { Certificate, CertificateType, renderCertificate } from './domain/Certificate'
 import { useLocalStorage } from './hooks/useLocalStorage'
 
 export function App() {
+  const [type, setType] = useLocalStorage('type', 'camp')
+
   const [memberName, setMemberName] = useLocalStorage('member_name', '')
   const [memberAddress, setMemberAddress] = useLocalStorage('member_address', '')
   const [campStart, setCampStart] = useLocalStorage('camp_start', '')
   const [campEnd, setCampEnd] = useLocalStorage('camp_end', '')
-  const [campPayment, setCampPayment] = useLocalStorage('camp_payment', 0, s => parseInt(s, 10), n => n.toFixed())
-  const [campPaymentDate, setCampPaymentDate] = useLocalStorage('camp_payment_date', '')
+  const [payment, setPayment] = useLocalStorage('payment', 0, s => parseInt(s, 10), n => n.toFixed())
+  const [paymentDate, setPaymentDate] = useLocalStorage('payment_date', '')
   const [signature, setSignature] = useState('')
 
   const campPeriod = useMemo<[string, string]>(() => [campStart, campEnd], [campStart, campEnd])
@@ -30,28 +32,34 @@ export function App() {
     const formatDate = (str?: string) => {
       return str ? new Date(str).toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
     }
+    const year = new Date().getFullYear()
     return {
+      type: type as CertificateType,
       memberName,
       memberAddress,
       campStartDate: formatDate(campPeriod[0]),
       campEndDate: formatDate(campPeriod[1]),
       campDays: campDays ?? 0,
-      campPayment,
-      campPaymentDate: formatDate(campPaymentDate),
+      membershipStartDate: formatDate(new Date(year, 8, 1).toString()),
+      membershipEndDate: formatDate(new Date(year + 1, 8, 1).toString()),
+      payment,
+      paymentDate: formatDate(paymentDate),
       date: formatDate(new Date().toString()),
       signature,
     }
-  }, [memberName, memberAddress, campPeriod, campDays, campPayment, campPaymentDate, signature])
+  }, [type, memberName, memberAddress, campPeriod, campDays, payment, paymentDate, signature])
 
   const memberNameInvalid = memberName.length === 0
   const memberAddressInvalid = memberAddress.length === 0
   const campStartInvalid = campPeriod[0].length === 0
   const campEndInvalid = campPeriod[1].length === 0 || campDays === undefined || campDays <= 0
-  const campPaymentInvalid = campPayment <= 0
-  const campPaymentDateInvalid = campPaymentDate.length === 0
+  const paymentInvalid = payment <= 0
+  const paymentDateInvalid = paymentDate.length === 0
   const signatureInvalid = signature.length === 0
 
-  const downloadInvalid = memberNameInvalid || memberAddressInvalid || campStartInvalid || campEndInvalid || campPaymentInvalid || campPaymentDateInvalid || signatureInvalid
+  const downloadInvalid = type === 'camp'
+    ? (memberNameInvalid || memberAddressInvalid || campStartInvalid || campEndInvalid || paymentInvalid || paymentDateInvalid || signatureInvalid)
+    : (memberNameInvalid || memberAddressInvalid || paymentInvalid || paymentDateInvalid || signatureInvalid)
 
   const [output, setOutput] = useState<string>()
   const timeoutRef = useRef<number>()
@@ -66,11 +74,15 @@ export function App() {
 
   return <main class='h-screen md:grid grid-cols-2'>
     <div class='m-3 flex flex-col justify-center items-center'>
+      <div class='flex gap-1'>
+        <Button label='Kamp' secondary disabled={type === 'camp'} onClick={() => setType('camp')} />
+        <Button label='Lidgeld' secondary disabled={type === 'membership'} onClick={() => setType('membership')} />
+      </div>
       <InputField label='Naam van het lid' value={memberName} onInput={setMemberName} invalid={memberNameInvalid} />
       <InputField label='Adres van het lid' value={memberAddress} onInput={setMemberAddress} invalid={memberAddressInvalid} />
-      <DateRangeField label='Periode van het kamp' value={campPeriod} onInput={setCampPeriod} invalid={[campStartInvalid, campEndInvalid]} />
-      <NumberField label='Betaald bedrag' value={campPayment} onInput={setCampPayment} invalid={campPaymentInvalid} />
-      <DateField label='Datum betaling' value={campPaymentDate} onInput={setCampPaymentDate} invalid={campPaymentDateInvalid} />
+      {type === 'camp' && <DateRangeField label='Periode van het kamp' value={campPeriod} onInput={setCampPeriod} invalid={[campStartInvalid, campEndInvalid]} />}
+      <NumberField label='Betaald bedrag' value={payment} onInput={setPayment} invalid={paymentInvalid} />
+      <DateField label='Datum betaling' value={paymentDate} onInput={setPaymentDate} invalid={paymentDateInvalid} />
       <ImageField label='Handtekening verantwoordelijke' value={signature} onInput={setSignature} invalid={signatureInvalid} />
       <Button label='Download attest' link={output} download={`Attest_${memberName.replaceAll(' ', '_')}`} disabled={downloadInvalid} />
     </div>
