@@ -51,19 +51,18 @@ export function App() {
   const campPaymentDateInvalid = campPaymentDate.length === 0
   const signatureInvalid = signature.length === 0
 
-  const output = useMemo(() => {
-    return renderCertificate(certificate)
-  }, [certificate])
+  const downloadInvalid = memberNameInvalid || memberAddressInvalid || campStartInvalid || campEndInvalid || campPaymentInvalid || campPaymentDateInvalid || signatureInvalid
 
-  const [preview, setPreview] = useState<string>()
+  const [output, setOutput] = useState<string>()
   const timeoutRef = useRef<number>()
 
   useEffect(() => {
     clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(() => {
-      setPreview(output)
+      const pdf = renderCertificate(certificate)
+      setOutput(pdf)
     }, 500)
-  }, [certificate, output])
+  }, [certificate])
 
   return <main class='h-screen md:grid grid-cols-2'>
     <div class='m-3 flex flex-col justify-center items-center'>
@@ -73,10 +72,10 @@ export function App() {
       <NumberField label='Betaald bedrag' value={campPayment} onInput={setCampPayment} invalid={campPaymentInvalid} />
       <DateField label='Datum betaling' value={campPaymentDate} onInput={setCampPaymentDate} invalid={campPaymentDateInvalid} />
       <ImageField label='Handtekening verantwoordelijke' value={signature} onInput={setSignature} invalid={signatureInvalid} />
-      <Button label='Download attest' link={output} download={`Attest_${memberName.replaceAll(' ', '_')}`} />
+      <Button label='Download attest' link={output} download={`Attest_${memberName.replaceAll(' ', '_')}`} disabled={downloadInvalid} />
     </div>
     <div>
-      <iframe class='w-full h-full min-h-[400px]' src={`${preview}#toolbar=0&navpanes=0&view=FitH`} />
+      <iframe class='w-full h-full min-h-[400px]' src={`${output}#toolbar=0&navpanes=0&view=FitH`} />
     </div>
   </main>
 }
