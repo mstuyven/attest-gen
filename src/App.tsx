@@ -32,7 +32,9 @@ export function App() {
     const formatDate = (str?: string) => {
       return str ? new Date(str).toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
     }
-    const year = new Date().getFullYear()
+    const yearStart = new Date()
+    yearStart.setMonth(yearStart.getMonth() - 8)
+    const year = yearStart.getFullYear()
     return {
       type: type as CertificateType,
       memberName,
