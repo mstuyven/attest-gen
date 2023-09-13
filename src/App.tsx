@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { Button } from './components/Button'
-import { DateField, DateRangeField, ImageField, InputField, NumberField } from './components/InputField'
-import { Certificate, CertificateType, renderCertificate } from './domain/Certificate'
+import { DateField, DateRangeField, FileField, ImageField, InputField, NumberField } from './components/InputField'
+import { Certificate, CertificateType, parseBulk, renderBulk, renderCertificate } from './domain/Certificate'
 import { useLocalStorage } from './hooks/useLocalStorage'
 
 export function App() {
+  const [bulkMode, setBulkMode] = useLocalStorage('bulk', true, s => s === 'true', b => `${b}`)
   const [type, setType] = useLocalStorage('type', 'camp')
 
   const [memberName, setMemberName] = useLocalStorage('member_name', '')
@@ -74,22 +75,54 @@ export function App() {
     }, 500)
   }, [certificate])
 
+  const [bulkFile, setBulkFile] = useState<string>()
+  const [bulkResult, setBulkResult] = useState<Record<string, string>[]>([])
+  const onBulk = useCallback((file: File | undefined) => {
+    if (file === undefined) {
+      setBulkFile(undefined)
+      return
+    }
+    file.text()
+      .then(setBulkFile)
+      .catch(() => setBulkFile(undefined))
+  }, [])
+  const makeBulk = useCallback(() => {
+    if (!bulkFile) return
+    const rows = parseBulk(bulkFile)
+    setBulkResult(rows)
+    setTimeout(() => {
+      const results = renderBulk(rows, signature)
+      setBulkResult(results)
+    })
+  }, [bulkFile, signature])
+
   return <main class='h-screen md:grid grid-cols-2'>
     <div class='m-3 flex flex-col justify-center items-center'>
-      <div class='flex gap-1'>
-        <Button label='Kamp' secondary disabled={type === 'camp'} onClick={() => setType('camp')} />
-        <Button label='Lidgeld' secondary disabled={type === 'membership'} onClick={() => setType('membership')} />
+      <div class='my-2 flex gap-1'>
+        <Button label='Kamp' secondary disabled={type === 'camp' && !bulkMode} onClick={() => {setType('camp');setBulkMode(false)}} />
+        <Button label='Lidgeld' secondary disabled={type === 'membership' && !bulkMode} onClick={() => {setType('membership');setBulkMode(false)}} />
+        <Button label='Bulk' secondary disabled={bulkMode} onClick={() => setBulkMode(true)} />
       </div>
-      <InputField label='Naam van het lid' value={memberName} onInput={setMemberName} invalid={memberNameInvalid} />
-      <InputField label='Adres van het lid' value={memberAddress} onInput={setMemberAddress} invalid={memberAddressInvalid} />
-      {type === 'camp' && <DateRangeField label='Periode van het kamp' value={campPeriod} onInput={setCampPeriod} invalid={[campStartInvalid, campEndInvalid]} />}
-      <NumberField label='Betaald bedrag' value={payment} onInput={setPayment} invalid={paymentInvalid} />
-      <DateField label='Datum betaling' value={paymentDate} onInput={setPaymentDate} invalid={paymentDateInvalid} />
-      <ImageField label='Handtekening verantwoordelijke' value={signature} onInput={setSignature} invalid={signatureInvalid} />
-      <Button label='Download attest' link={output} download={`Attest_${memberName.replaceAll(' ', '_')}`} disabled={downloadInvalid} />
+      {bulkMode === false ? <>
+        <InputField label='Naam van het lid' value={memberName} onInput={setMemberName} invalid={memberNameInvalid} />
+        <InputField label='Adres van het lid' value={memberAddress} onInput={setMemberAddress} invalid={memberAddressInvalid} />
+        {type === 'camp' && <DateRangeField label='Periode van het kamp' value={campPeriod} onInput={setCampPeriod} invalid={[campStartInvalid, campEndInvalid]} />}
+        <NumberField label='Betaald bedrag' value={payment} onInput={setPayment} invalid={paymentInvalid} />
+        <DateField label='Datum betaling' value={paymentDate} onInput={setPaymentDate} invalid={paymentDateInvalid} />
+        <ImageField label='Handtekening verantwoordelijke' value={signature} onInput={setSignature} invalid={signatureInvalid} />
+        <Button class="my-2" label='Download attest' link={output} download={`Attest_${memberName.replaceAll(' ', '_')}`} disabled={downloadInvalid} />
+      </> : <>
+        <FileField label='CSV bestand' onInput={onBulk} invalid={!bulkFile} accept='.csv' />
+        <ImageField label='Handtekening verantwoordelijke' value={signature} onInput={setSignature} invalid={signatureInvalid} />
+        <Button class="my-2" label='Maak attesten aan' onClick={makeBulk} disabled={!bulkFile || signatureInvalid} />
+      </>}
     </div>
-    <div>
+    {bulkMode === false ? <div>
       <iframe class='w-full h-full min-h-[400px]' src={`${output}#toolbar=0&navpanes=0&view=FitH`} />
-    </div>
+    </div> : <div class="py-4 flex flex-col items-center gap-1 h-screen overflow-y-scroll">
+      {bulkResult.map(r =>
+        <Button class="w-60" secondary label={r.Naam} link={r.pdf} download={`Attest_${r.Naam.replaceAll(' ', '_')}`} disabled={r.pdf === undefined} />)}
+      </div>
+    }
   </main>
 }

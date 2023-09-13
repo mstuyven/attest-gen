@@ -80,13 +80,13 @@ export function DateRangeField({ label, value, onInput, invalid }: DateRangeFiel
 	</div>
 }
 
-interface ImageFieldProps {
+interface FileFieldProps {
 	label: string
-	value: string
-	onInput: (value: string) => void
+	onInput: (value: File | undefined) => void
+	accept?: string
 	invalid?: boolean
 }
-export function ImageField({ label, onInput, invalid }: ImageFieldProps) {
+export function FileField({ label, onInput, accept, invalid }: FileFieldProps) {
 	const ref = useRef<HTMLInputElement>(null)
 	const [name, setName] = useState<string>('')
 
@@ -94,16 +94,11 @@ export function ImageField({ label, onInput, invalid }: ImageFieldProps) {
 		if (ref.current?.files) {
 			for (const file of ref.current.files) {
 				setName(file.name)
-				file.arrayBuffer().then(buf => {
-					const array = new Uint8Array(buf)
-					const blob = new Blob([array], { type: 'image/jpeg' })
-					const url = URL.createObjectURL(blob)
-					onInput(url)
-				})
+				onInput(file)
 			}
 		} else {
 			setName('')
-			onInput('')
+			onInput(undefined)
 		}
 	}, [ref, onInput])
 
@@ -113,8 +108,31 @@ export function ImageField({ label, onInput, invalid }: ImageFieldProps) {
 			ref={ref}
 			class={`rounded bg-gray-300 text-gray-900 p-1 px-2 w-full outline-1 ${invalid ? 'outline outline-rose-700 focus:outline-2' : ''}`}
 			type='file'
-			accept='image/jpeg'
+			accept={accept}
 			value={name}
 			onInput={onFileInput} />
 	</div>
+}
+
+interface ImageFieldProps {
+	label: string
+	value: string
+	onInput: (value: string) => void
+	invalid?: boolean
+}
+export function ImageField({ label, onInput, invalid }: ImageFieldProps) {
+	const onFileInput = useCallback((file: File | undefined) => {
+		if (file === undefined) {
+			onInput('')
+			return
+		}
+		file.arrayBuffer().then(buf => {
+			const array = new Uint8Array(buf)
+			const blob = new Blob([array], { type: 'image/jpeg' })
+			const url = URL.createObjectURL(blob)
+			onInput(url)
+		})
+	}, [onInput])
+
+	return <FileField label={label} onInput={onFileInput} accept='image/jpeg' invalid={invalid} />
 }

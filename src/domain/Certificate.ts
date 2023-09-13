@@ -112,3 +112,45 @@ export function renderCertificate(certificate: Certificate) {
 
 	return doc.output('datauristring', { filename: `Attest ${certificate.memberName}` })
 }
+
+export function parseBulk(text: string) {
+	const lines = text.split('\n').map(line => line.trim())
+  const array = lines.map((line) => {
+    const columns = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    return columns.map((column) => column.replace(/^"(.*)"$/, '$1'));
+  })
+	const header = array[0]
+	return array.slice(1).map(row => Object.fromEntries(header.map((k, i) => [k, row[i]])))
+}
+
+export function renderBulk(rows: Record<string, string>[], signature: string) {
+	const results: Record<string, string>[] = []
+	for (const row of rows) {
+		const campPeriod = row.Aanwezig.match(/^(\d+) juli - (\d+) juli$/)?.slice(1, 3).map(s => Number(s))
+		if (!campPeriod) {
+			results.push({ ...row, error: 'ongeldige kamp periode' })
+			continue
+		}
+		const payment = Number(row.Bedrag.replace(/^€\s*/, ''))
+		if (payment <= 0 || !row.Datum) {
+			results.push({ ...row, error: 'geen betaling' })
+			continue
+		}
+		const certificate: Certificate = {
+			type: 'camp',
+			date: new Date().toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+			memberName: row.Naam,
+			memberAddress: row.Adres,
+			campStartDate: `${campPeriod[0]}/07/2023`,
+			campEndDate: `${campPeriod[1]}/07/2023`,
+			campDays: campPeriod[1] - campPeriod[0],
+			paymentDate: row.Datum,
+			payment: payment,
+			membershipStartDate: '',
+			membershipEndDate: '',
+			signature: signature,
+		}
+		results.push({ ...row, pdf: renderCertificate(certificate) })
+	}
+	return results
+}
